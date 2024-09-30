@@ -10,5 +10,8 @@ print(result_1)
 result_2 = conn.execute("select count(*) from zones").fetchall()
 print(result_2)
 
+conn.execute("drop table trips;")
+print('dropped table trips')
+
 # Ngắt kết nối
 conn.close()
