@@ -78,3 +78,29 @@ def trips_by_week(context: AssetExecutionContext, database: DuckDBResource) -> N
         where pickup_datetime >= '{period_to_fetch}'
             and pickup_datetime < '{period_to_fetch}'::date + interval '1 week'
     """
+    with database.get_connection() as conn:
+        data_for_month = conn.execute(query).fetch_df()
+
+    aggregate = data_for_month.agg({
+        "vendor_id": "count",
+        "total_amount": "sum",
+        "trip_distance": "sum",
+        "passenger_count": "sum"
+    }).rename({"vendor_id": "num_trips"}).to_frame().T # type: ignore
+
+    # clean up the formatting of the dataframe
+    aggregate["period"] = period_to_fetch
+    aggregate['num_trips'] = aggregate['num_trips'].astype(int)
+    aggregate['passenger_count'] = aggregate['passenger_count'].astype(int)
+    aggregate['total_amount'] = aggregate['total_amount'].round(2).astype(float)
+    aggregate['trip_distance'] = aggregate['trip_distance'].round(2).astype(float)
+    aggregate = aggregate[["period", "num_trips", "total_amount", "trip_distance", "passenger_count"]]
+
+    try:
+        # If the file already exists, append to it, but replace the existing month's data
+        existing = pd.read_csv(constants.TRIPS_BY_WEEK_FILE_PATH)
+        existing = existing[existing["period"] != period_to_fetch]
+        existing = pd.concat([existing, aggregate]).sort_values(by="period")
+        existing.to_csv(constants.TRIPS_BY_WEEK_FILE_PATH, index=False)
+    except FileNotFoundError:
+        aggregate.to_csv(constants.TRIPS_BY_WEEK_FILE_PATH, index=False)
