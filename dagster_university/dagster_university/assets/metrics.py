@@ -15,7 +15,8 @@ from ..partitions import weekly_partition
 
 
 @asset(
-    deps=["taxi_trips", "taxi_zones"]
+    deps=["taxi_trips", "taxi_zones"],
+    group_name="metrics"
 )
 def manhattan_stats(database: DuckDBResource) -> None:
     query = """
@@ -61,7 +62,8 @@ def manhattan_stats(database: DuckDBResource) -> None:
 
 @asset(
     deps=["taxi_trips"],
-    partitions_def=weekly_partition
+    partitions_def=weekly_partition,
+    group_name="metrics"
 )
 def trips_by_week(context: AssetExecutionContext, database: DuckDBResource) -> None:
 
